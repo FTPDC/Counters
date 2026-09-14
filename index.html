@@ -146,7 +146,8 @@
                 var div = document.createElement('div');
                 div.className = 'barcode-item';
 
-                var svg = document.createElement('svg');
+                // Створюємо SVG з правильним простором імен для браузера
+                var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
                 div.appendChild(svg);
 
                 container.appendChild(div);
@@ -155,11 +156,11 @@
                     JsBarcode(svg, bc, {
                         format: "CODE128",
                         lineColor: "#000",
-                        width: 2.5,
-                        height: 90,
+                        width: 2,
+                        height: 70,
                         displayValue: true,
-                        fontSize: 20,
-                        textMargin: 8
+                        fontSize: 18,
+                        textMargin: 6
                     });
                 } catch (e) {
                     console.error("Помилка генерації для шк:", bc, e);
