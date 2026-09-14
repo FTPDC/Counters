@@ -89,7 +89,7 @@
     <div id="print-area"></div>
 
     <script>
-        const API_URL = 'https://script.google.com/macros/s/AKfycbxvt3XVrHm2Rwz3W64w_TFbm1kIvJYFia2LLu8kAykuFx81BCqpxtW-AZy1KWKSpKFN1w/exec';
+       const API_URL = 'https://script.google.com/macros/s/AKfycbxvt3XVrHm2Rwz3W64w_TFbm1kIvJYFia2LLu8kAykuFx81BCqpxtW-AZy1KWKSpKFN1w/exec';
 
         window.onload = function() {
             fetch(API_URL + '?action=getWarehouses')
@@ -127,6 +127,7 @@
                     document.getElementById('loader').style.display = 'none';
                     if(res.status === 'success') {
                         renderBarcodes(res.barcodes);
+                        printBarcodes(res.barcodes); // Автоматично запускаємо друк на весь лист
                     } else {
                         alert('Помилка сервера: ' + res.message);
                     }
@@ -146,10 +147,8 @@
                 var div = document.createElement('div');
                 div.className = 'barcode-item';
 
-                // Створюємо SVG з правильним простором імен для браузера
                 var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
                 div.appendChild(svg);
-
                 container.appendChild(div);
 
                 try {
@@ -166,6 +165,41 @@
                     console.error("Помилка генерації для шк:", bc, e);
                 }
             });
+        }
+
+        function printBarcodes(barcodes) {
+            const win = window.open('', '_blank');
+            win.document.write(`<!DOCTYPE html><html><head><style>
+              @page { margin: 0; size: auto; }
+              html, body { margin: 0; padding: 0; width: 100%; height: 100%; }
+              .page { 
+                page-break-after: always; 
+                width: 100vw; 
+                height: 100vh; 
+                display: flex; 
+                align-items: center; 
+                justify-content: center; 
+                box-sizing: border-box;
+                padding: 5mm;
+              }
+              svg { width: 100%; height: 100%; max-height: 95vh; display: block; }
+            </style></head><body>`);
+
+            barcodes.forEach(function(bc) {
+                const tmp = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                JsBarcode(tmp, bc, {
+                    format: 'CODE128', 
+                    width: 4, 
+                    height: 120,
+                    displayValue: true, 
+                    fontSize: 50, 
+                    fontOptions: 'bold',
+                    textMargin: 10
+                });
+                win.document.write('<div class="page">' + tmp.outerHTML + '</div>');
+            });
+
+            win.document.write('<script>window.onload=()=>{setTimeout(()=>{window.print();window.close();}, 100);}<\/script></body></html>');
         }
     </script>
 </body>
