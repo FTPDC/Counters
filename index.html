@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Генератор штрих-кодів по складах</title>
+    <!-- Бібліотека для генерації штрих-кодів -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f4f7f6; color: #333; }
+        .card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); max-width: 600px; margin-bottom: 20px; }
+        label { display: block; margin-top: 10px; font-weight: bold; }
+        select, input { width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        button { background: #007bff; color: white; border: none; padding: 10px 15px; margin-top: 15px; cursor: pointer; border-radius: 4px; font-size: 16px; width: 100%; }
+        button:hover { background: #0056b3; }
+        .loader { display: none; text-align: center; margin-top: 10px; color: #666; }
+        
+        #print-area { display: flex; flex-wrap: wrap; gap: 15px; margin-top: 20px; }
+        .barcode-item { background: #fff; border: 1px dashed #aaa; padding: 10px; text-align: center; border-radius: 4px; page-break-inside: avoid; }
+        .barcode-text { font-size: 14px; font-weight: bold; margin-top: 5px; }
+        
+        @media print {
+            body * { visibility: hidden; }
+            #print-area, #print-area * { visibility: visible; }
+            #print-area { position: absolute; left: 0; top: 0; width: 100%; }
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="card no-print">
+        <h2>Генератор штрих-кодів (Google Sheets Sync)</h2>
+        
+        <label for="warehouseSelect">Виберіть склад:</label>
+        <select id="warehouseSelect">
+            <option value="">Завантаження складів...</option>
+        </select>
+
+        <label for="countInput">Кількість необхідних ШК:</label>
+        <input type="number" id="countInput" value="10" min="1" max="500">
+
+        <button onclick="generate()">Згенерувати та оновити лічильник</button>
+        <div class="loader" id="loader">Зв'язок з Google Таблицею...</div>
+    </div>
+
+    <div class="no-print" style="max-width: 600px;">
+        <button onclick="window.print()" style="background: #28a745;">Друк штрих-кодів</button>
+    </div>
+
+    <div id="print-area"></div>
+
+    <script>
+        // Встав сюди URL свого Google Apps Script Веб-додатка:
+        const API_URL = 'https://script.google.com/macros/s/AKfycbxvt3XVrHm2Rwz3W64w_TFbm1kIvJYFia2LLu8kAykuFx81BCqpxtW-AZy1KWKSpKFN1w/exec';
+
+        window.onload = function() {
+            fetch(API_URL + '?action=getWarehouses')
+                .then(response => response.json())
+                .then(warehouses => {
+                    var select = document.getElementById('warehouseSelect');
+                    select.innerHTML = '';
+                    warehouses.forEach(function(w) {
+                        var opt = document.createElement('option');
+                        opt.value = w.code;
+                        opt.textContent = w.name + ' (' + w.code + ')';
+                        select.appendChild(opt);
+                    });
+                })
+                .catch(err => {
+                    alert('Помилка завантаження складів: альбо перевірте URL API.');
+                    console.error(err);
+                });
+        };
+
+        function generate() {
+            var code = document.getElementById('warehouseSelect').value;
+            var count = document.getElementById('countInput').value;
+
+            if (!code || !count) {
+                alert('Виберіть склад та вкажіть кількість!');
+                return;
+            }
+
+            document.getElementById('loader').style.display = 'block';
+
+            fetch(`${API_URL}?action=generate&code=${code}&count=${count}`)
+                .then(response => response.json())
+                .then(res => {
+                    document.getElementById('loader').style.display = 'none';
+                    if(res.status === 'success') {
+                        renderBarcodes(res.barcodes);
+                    } else {
+                        alert('Помилка сервера: ' + res.message);
+                    }
+                })
+                .catch(err => {
+                    document.getElementById('loader').style.display = 'none';
+                    alert('Помилка з’єднання з сервером.');
+                    console.error(err);
+                });
+        }
+
+        function renderBarcodes(barcodes) {
+            var container = document.getElementById('print-area');
+            container.innerHTML = '';
+
+            barcodes.forEach(function(bc) {
+                var div = document.createElement('div');
+                div.className = 'barcode-item';
+
+                var svg = document.createElement('svg');
+                div.appendChild(svg);
+
+                var textDiv = document.createElement('div');
+                textDiv.className = 'barcode-text';
+                textDiv.textContent = bc;
+                div.appendChild(textDiv);
+
+                container.appendChild(div);
+
+                JsBarcode(svg, bc, {
+                    format: "CODE128",
+                    width: 1.5,
+                    height: 50,
+                    displayValue: false
+                });
+            });
+        }
+    </script>
+</body>
+</html>
