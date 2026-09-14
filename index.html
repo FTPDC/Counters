@@ -15,15 +15,35 @@
         button:hover { background: #0056b3; }
         .loader { display: none; text-align: center; margin-top: 10px; color: #666; }
         
-        #print-area { display: flex; flex-wrap: wrap; gap: 15px; margin-top: 20px; }
-        .barcode-item { background: #fff; border: 1px dashed #aaa; padding: 10px; text-align: center; border-radius: 4px; page-break-inside: avoid; }
-        .barcode-text { font-size: 14px; font-weight: bold; margin-top: 5px; }
+        #print-area { display: flex; flex-wrap: gap: 15px; margin-top: 20px; }
+        
+        /* Етикетка розміром 10x10 см */
+        .barcode-item { 
+            background: #fff; 
+            width: 100mm; 
+            height: 100mm; 
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            page-break-after: always;
+            break-after: page;
+            page-break-inside: avoid;
+        }
         
         @media print {
+            @page {
+                size: 100mm 100mm;
+                margin: 0;
+            }
             body * { visibility: hidden; }
             #print-area, #print-area * { visibility: visible; }
-            #print-area { position: absolute; left: 0; top: 0; width: 100%; }
+            #print-area { position: absolute; left: 0; top: 0; width: 100mm; }
             .no-print { display: none; }
+            .barcode-item {
+                border: none;
+            }
         }
     </style>
 </head>
@@ -45,14 +65,13 @@
     </div>
 
     <div class="no-print" style="max-width: 600px;">
-        <button onclick="window.print()" style="background: #28a745;">Друк штрих-кодів</button>
+        <button onclick="window.print()" style="background: #28a745;">Друк етикеток (10x10 см)</button>
     </div>
 
     <div id="print-area"></div>
 
     <script>
-        // Встав сюди URL свого Google Apps Script Веб-додатка:
-        const API_URL = 'https://script.google.com/macros/s/AKfycbxvt3XVrHm2Rwz3W64w_TFbm1kIvJYFia2LLu8kAykuFx81BCqpxtW-AZy1KWKSpKFN1w/exec';
+        const API_URL = 'ТУТ_СТАВ_СВІЙ_URL_ВЕБ_ДОДАТКУ';
 
         window.onload = function() {
             fetch(API_URL + '?action=getWarehouses')
@@ -68,7 +87,7 @@
                     });
                 })
                 .catch(err => {
-                    alert('Помилка завантаження складів: альбо перевірте URL API.');
+                    alert('Помилка завантаження складів.');
                     console.error(err);
                 });
         };
@@ -112,19 +131,22 @@
                 var svg = document.createElement('svg');
                 div.appendChild(svg);
 
-                var textDiv = document.createElement('div');
-                textDiv.className = 'barcode-text';
-                textDiv.textContent = bc;
-                div.appendChild(textDiv);
-
                 container.appendChild(div);
 
-                JsBarcode(svg, bc, {
-                    format: "CODE128",
-                    width: 1.5,
-                    height: 50,
-                    displayValue: false
-                });
+                try {
+                    // displayValue: true додає текст під штрих-кодом, який зчитує сканер
+                    JsBarcode(svg, bc, {
+                        format: "CODE128",
+                        lineColor: "#000",
+                        width: 2,
+                        height: 80,
+                        displayValue: true,
+                        fontSize: 18,
+                        textMargin: 5
+                    });
+                } catch (e) {
+                    console.error("Помилка генерації для шк:", bc, e);
+                }
             });
         }
     </script>
